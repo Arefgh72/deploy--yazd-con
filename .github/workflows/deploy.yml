@@ -23,17 +23,17 @@ jobs:
 
     steps:
     - name: Checkout repository
-      uses: actions/checkout@v3
+      uses: actions/checkout@v4 # <-- همچنین این را به v4 به‌روزرسانی می‌کنیم
 
     - name: Set up Python
-      uses: actions/setup-python@v4
+      uses: actions/setup-python@v5 # <-- همچنین این را به v5 به‌روزرسانی می‌کنیم
       with:
         python-version: '3.10'
 
     - name: Install Node.js and dependencies
-      uses: actions/setup-node@v3
+      uses: actions/setup-node@v4 # <-- همچنین این را به v4 به‌روزرسانی می‌کنیم
       with:
-        node-version: '18'
+        node-version: '20'
     - run: npm install -g solc
     - run: npm install @openzeppelin/contracts
 
@@ -52,7 +52,7 @@ jobs:
       run: python scripts/deploy.py
 
     - name: Upload Deployment and Verification Artifacts
-      uses: actions/upload-artifact@v3
+      uses: actions/upload-artifact@v4 # <-- تغییر اصلی اینجاست
       with:
         name: deployment-artifacts-${{ github.event.inputs.network_name }}
         path: |
