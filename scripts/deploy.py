@@ -17,7 +17,7 @@ def generate_standard_json_input(contract_path, source_code):
         },
         "settings": {
             "optimizer": {
-                "enabled": False, # مطابق با تنظیمات کامپایل ما
+                "enabled": False,
                 "runs": 200
             },
             "outputSelection": {
@@ -99,8 +99,8 @@ def deploy():
             'gasPrice': w3.eth.gas_price
         })
         signed_tx = w3.eth.account.sign_transaction(tx, private_key)
-        tx_hash = w3.eth.send_raw_transaction(signed_tx.rawTransaction)
-        
+        tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction) # <-- تغییر اینجا بود
+
         receipt = wait_for_receipt(w3, tx_hash)
         contract_address = receipt.contractAddress
         print(f"-> {contract_name} deployed at: {contract_address}")
@@ -108,7 +108,7 @@ def deploy():
             print(f"   Explorer link: {explorer_url}/address/{contract_address}")
         return w3.eth.contract(address=contract_address, abi=interface['abi'])
 
-    # ۵. دیپلوی قراردادها با ترتیب صحیح
+    # ۵. دیپلوی قراردادها
     yazd_nft_contract = deploy_contract("contracts/YazdParadiseNFT.sol:YazdParadiseNFT", [account.address])
     pars_token_contract = deploy_contract("contracts/ParsToken.sol:ParsToken", [account.address])
     main_contract = deploy_contract("contracts/MainContract.sol:MainContract", [yazd_nft_contract.address, pars_token_contract.address, account.address])
