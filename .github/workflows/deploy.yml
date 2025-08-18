@@ -27,13 +27,12 @@ on:
 jobs:
   deploy:
     runs-on: ubuntu-latest
-    # به ورک‌فلو اجازه نوشتن در ریپازیتوری را می‌دهد
-    permissions:
-      contents: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GH_PAT }}
 
     - name: Install jq
       run: sudo apt-get update && sudo apt-get install -y jq
@@ -94,7 +93,6 @@ jobs:
     - name: Update networks.json if new network was added
       if: success() && env.MODE == 'manual'
       run: |
-        # جلوگیری از افزودن ورودی‌های تکراری یا خالی
         if jq -e --arg id "${{ env.UNIQUE_ID }}" 'map(.id) | contains([$id])' networks.json; then
           echo "Network profile ${{ env.UNIQUE_ID }} already exists. Skipping."
           exit 0
@@ -103,7 +101,6 @@ jobs:
             echo "Manual inputs are empty. Skipping."
             exit 0
         fi
-
         NEW_NETWORK_JSON=$(jq -n \
           --arg id "${{ env.UNIQUE_ID }}" \
           --arg dn "${{ env.NETWORK_NAME }}" \
