@@ -6,7 +6,8 @@ on:
         description: 'یک شبکه ذخیره شده یا manual را برای افزودن شبکه جدید انتخاب کنید'
         required: true
         type: choice
-        options: ""
+        options:
+          - manual
         default: 'manual'
       network_name:
         description: 'نام سفارشی شبکه (فقط در حالت دستی)'
