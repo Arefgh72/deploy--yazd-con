@@ -1,1 +1,10 @@
-[]
+[
+  {
+    "id": "Ethereum Sepolia-11155111",
+    "displayName": "Ethereum Sepolia",
+    "network_name": "Ethereum Sepolia",
+    "rpc_url": "https://ethereum-sepolia-rpc.publicnode.com",
+    "chain_id": "11155111",
+    "explorer_url": "https://sepolia.etherscan.io"
+  }
+]
