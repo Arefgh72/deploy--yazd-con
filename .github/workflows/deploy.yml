@@ -1,4 +1,5 @@
 name: 1. Deploy Smart Contracts
+
 on:
   workflow_dispatch:
     inputs:
@@ -6,8 +7,10 @@ on:
         description: 'یک شبکه ذخیره شده یا manual را برای افزودن شبکه جدید انتخاب کنید'
         required: true
         type: choice
-        options: ""
+        options:
+          - manual
         default: 'manual'
+
       network_name:
         description: 'نام سفارشی شبکه (فقط در حالت دستی)'
         required: false
@@ -20,87 +23,97 @@ on:
       explorer_url:
         description: 'آدرس اکسپلورر (اختیاری)'
         required: false
+
 jobs:
   deploy:
     runs-on: ubuntu-latest
+
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v4
-        with:
-          token: ${{ secrets.GH_PAT }}
-      - name: Install jq
-        run: sudo apt-get update && sudo apt-get install -y jq
-      - name: Set Network Environment Variables
-        id: set_vars
-        run: |
-          PROFILE="${{ github.event.inputs.network_profile }}"
-          if [[ "$PROFILE" == "manual" ]]; then
-            echo "MODE=manual" >> $GITHUB_ENV
-            echo "NETWORK_NAME=${{ github.event.inputs.network_name }}" >> $GITHUB_ENV
-            echo "RPC_URL=${{ github.event.inputs.rpc_url }}" >> $GITHUB_ENV
-            echo "CHAIN_ID=${{ github.event.inputs.chain_id }}" >> $GITHUB_ENV
-            echo "EXPLORER_URL=${{ github.event.inputs.explorer_url }}" >> $GITHUB_ENV
-            echo "UNIQUE_ID=${{ github.event.inputs.network_name }}-${{ github.event.inputs.chain_id }}" >> $GITHUB_ENV
-          else
-            echo "MODE=profile" >> $GITHUB_ENV
-            NETWORK_DATA=$(jq --arg profile "$PROFILE" '.[] | select(.id == $profile)' networks.json)
-            echo "NETWORK_NAME=$(echo $NETWORK_DATA | jq -r .network_name)" >> $GITHUB_ENV
-            echo "RPC_URL=$(echo $NETWORK_DATA | jq -r .rpc_url)" >> $GITHUB_ENV
-            echo "CHAIN_ID=$(echo $NETWORK_DATA | jq -r .chain_id)" >> $GITHUB_ENV
-            echo "EXPLORER_URL=$(echo $NETWORK_DATA | jq -r .explorer_url)" >> $GITHUB_ENV
-          fi
-      - name: Set up Python
-        uses: actions/setup-python@v5
-        with:
-          python-version: '3.10'
-      - name: Install Node.js and dependencies
-        uses: actions/setup-node@v4
-        with:
-          node-version: '20'
-      - run: npm install -g solc
-      - run: npm install @openzeppelin/contracts
-      - name: Install Python dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-      - name: Deploy Contracts
-        env:
-          PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
-          NETWORK_NAME: ${{ env.NETWORK_NAME }}
-          RPC_URL: ${{ env.RPC_URL }}
-          CHAIN_ID: ${{ env.CHAIN_ID }}
-          EXPLORER_URL: ${{ env.EXPLORER_URL }}
-        run: python scripts/deploy.py
-      - name: Upload Deployment Artifacts
-        uses: actions/upload-artifact@v4
-        with:
-          name: deployment-artifacts-${{ env.NETWORK_NAME }}
-          path: |
-            ./deployment_output_*.json
-      - name: Update networks.json if new network was added
-        if: success() && env.MODE == 'manual'
-        run: |
-          if jq -e --arg id "${{ env.UNIQUE_ID }}" 'map(.id) | contains([$id])' networks.json; then
-            echo "Network profile ${{ env.UNIQUE_ID }} already exists. Skipping."
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      with:
+        token: ${{ secrets.GH_PAT }}
+
+    - name: Install jq
+      run: sudo apt-get update && sudo apt-get install -y jq
+
+    - name: Set Network Environment Variables
+      id: set_vars
+      run: |
+        PROFILE="${{ github.event.inputs.network_profile }}"
+        if [[ "$PROFILE" == "manual" ]]; then
+          echo "MODE=manual" >> $GITHUB_ENV
+          echo "NETWORK_NAME=${{ github.event.inputs.network_name }}" >> $GITHUB_ENV
+          echo "RPC_URL=${{ github.event.inputs.rpc_url }}" >> $GITHUB_ENV
+          echo "CHAIN_ID=${{ github.event.inputs.chain_id }}" >> $GITHUB_ENV
+          echo "EXPLORER_URL=${{ github.event.inputs.explorer_url }}" >> $GITHUB_ENV
+          echo "UNIQUE_ID=${{ github.event.inputs.network_name }}-${{ github.event.inputs.chain_id }}" >> $GITHUB_ENV
+        else
+          echo "MODE=profile" >> $GITHUB_ENV
+          NETWORK_DATA=$(jq --arg profile "$PROFILE" '.[] | select(.id == $profile)' networks.json)
+          echo "NETWORK_NAME=$(echo $NETWORK_DATA | jq -r .network_name)" >> $GITHUB_ENV
+          echo "RPC_URL=$(echo $NETWORK_DATA | jq -r .rpc_url)" >> $GITHUB_ENV
+          echo "CHAIN_ID=$(echo $NETWORK_DATA | jq -r .chain_id)" >> $GITHUB_ENV
+          echo "EXPLORER_URL=$(echo $NETWORK_DATA | jq -r .explorer_url)" >> $GITHUB_ENV
+        fi
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+
+    - name: Install Node.js and dependencies
+      uses: actions/setup-node@v4
+      with:
+        node-version: '20'
+    - run: npm install -g solc
+    - run: npm install @openzeppelin/contracts
+
+    - name: Install Python dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+
+    - name: Deploy Contracts
+      env:
+        PRIVATE_KEY: ${{ secrets.PRIVATE_KEY }}
+        NETWORK_NAME: ${{ env.NETWORK_NAME }}
+        RPC_URL: ${{ env.RPC_URL }}
+        CHAIN_ID: ${{ env.CHAIN_ID }}
+        EXPLORER_URL: ${{ env.EXPLORER_URL }}
+      run: python scripts/deploy.py
+      
+    - name: Upload Deployment Artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: deployment-artifacts-${{ env.NETWORK_NAME }}
+        path: |
+          ./deployment_output_*.json
+
+    - name: Update networks.json if new network was added
+      if: success() && env.MODE == 'manual'
+      run: |
+        if jq -e --arg id "${{ env.UNIQUE_ID }}" 'map(.id) | contains([$id])' networks.json; then
+          echo "Network profile ${{ env.UNIQUE_ID }} already exists. Skipping."
+          exit 0
+        fi
+        if [ -z "${{ env.UNIQUE_ID }}" ] || [ "${{ env.UNIQUE_ID }}" == "-" ]; then
+            echo "Manual inputs are empty. Skipping."
             exit 0
-          fi
-          if [ -z "${{ env.UNIQUE_ID }}" ] || [ "${{ env.UNIQUE_ID }}" == "-" ]; then
-              echo "Manual inputs are empty. Skipping."
-              exit 0
-          fi
-          NEW_NETWORK_JSON=$(jq -n \
-            --arg id "${{ env.UNIQUE_ID }}" \
-            --arg dn "${{ env.NETWORK_NAME }}" \
-            --arg nn "${{ env.NETWORK_NAME }}" \
-            --arg rpc "${{ env.RPC_URL }}" \
-            --arg cid "${{ env.CHAIN_ID }}" \
-            --arg ex "${{ env.EXPLORER_URL }}" \
-            '{id: $id, displayName: $dn, network_name: $nn, rpc_url: $rpc, chain_id: $cid, explorer_url: $ex}')
-
-          jq --argjson new_network "$NEW_NETWORK_JSON" '. += [$new_network]' networks.json > tmp.json && mv tmp.json networks.json
-
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add networks.json
-          git commit -m "chore: add new network profile ${{ env.UNIQUE_ID }}"
-          git push
+        fi
+        NEW_NETWORK_JSON=$(jq -n \
+          --arg id "${{ env.UNIQUE_ID }}" \
+          --arg dn "${{ env.NETWORK_NAME }}" \
+          --arg nn "${{ env.NETWORK_NAME }}" \
+          --arg rpc "${{ env.RPC_URL }}" \
+          --arg cid "${{ env.CHAIN_ID }}" \
+          --arg ex "${{ env.EXPLORER_URL }}" \
+          '{id: $id, displayName: $dn, network_name: $nn, rpc_url: $rpc, chain_id: $cid, explorer_url: $ex}')
+        
+        jq --argjson new_network "$NEW_NETWORK_JSON" '. += [$new_network]' networks.json > tmp.json && mv tmp.json networks.json
+        
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add networks.json
+        git commit -m "chore: add new network profile ${{ env.UNIQUE_ID }}"
+        git push
