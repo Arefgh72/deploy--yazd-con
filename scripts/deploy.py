@@ -105,6 +105,7 @@ def deploy():
         print(f"-> {contract_name} deployed at: {contract_address}")
         if explorer_url:
             print(f"   Explorer link: {explorer_url}/address/{contract_address}")
+        time.sleep(10)
         return w3.eth.contract(address=contract_address, abi=interface['abi'])
 
     # ۵. دیپلوی قراردادها
@@ -126,6 +127,7 @@ def deploy():
         signed_tx = w3.eth.account.sign_transaction(tx, private_key)
         tx_hash = w3.eth.send_raw_transaction(signed_tx.raw_transaction)
         wait_for_receipt(w3, tx_hash)
+        time.sleep(10)
 
     print("-> Preparing to transfer YazdParadiseNFT ownership...")
     send_tx(yazd_nft_contract.functions.transferOwnership(main_contract.address))
