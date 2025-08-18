@@ -1,0 +1,45 @@
+name: 2. Sync Network IDs to Deploy Workflow
+
+on:
+  push:
+    branches:
+      - main # یا نام برنچ اصلی شما
+    paths:
+      - 'networks.json'
+
+jobs:
+  sync:
+    runs-on: ubuntu-latest
+    # ====== بخش جدید: دادن دسترسی نوشتن به ورک‌فلو ======
+    permissions:
+      contents: write
+
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+      # ====== تغییر: دیگر به توکن شخصی نیازی نیست ======
+      # with:
+      #   token: ${{ secrets.GH_PAT }}
+
+    # ... (بقیه مراحل فایل sync-ids.yml بدون هیچ تغییری باقی می‌مانند) ...
+    - name: Install jq and yq
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y jq
+        sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+
+    - name: Update deploy.yml with new network IDs
+      run: |
+        IDS=$(jq -r '.[].id' networks.json)
+        OPTIONS="manual\n$IDS"
+        yq e -i '.on.workflow_dispatch.inputs.network_profile.options = strenv(OPTIONS)' .github/workflows/deploy.yml
+        
+        if [[ -n $(git status --porcelain) ]]; then
+          git config --global user.name 'github-actions[bot]'
+          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+          git add .github/workflows/deploy.yml
+          git commit -m "chore: sync network profiles to deploy workflow"
+          git push
+        else
+          echo "No changes needed in deploy.yml"
+        fi
