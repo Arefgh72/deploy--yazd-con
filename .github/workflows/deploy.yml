@@ -8,7 +8,7 @@ on:
         type: choice
         options:
           - manual
-          - Ethereum Sepolia-11155111
+          - Monad Testnet-10143
         default: 'manual'
       network_name:
         description: 'نام سفارشی شبکه (فقط در حالت دستی)'
