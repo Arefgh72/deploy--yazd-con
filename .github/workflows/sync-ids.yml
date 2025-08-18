@@ -25,16 +25,10 @@ jobs:
 
     - name: Update deploy.yml with new network IDs
       run: |
-        # استخراج لیست ID ها از فایل JSON
-        IDS=$(jq -r '.[].id' networks.json)
+        # ====== بخش اصلاح شده و نهایی ======
+        # این دستور به صورت هوشمند لیست گزینه‌ها را بازسازی می‌کند
+        yq e -i '.on.workflow_dispatch.inputs.network_profile.options = ["manual"] + (load("networks.json") | .[].id)' .github/workflows/deploy.yml
         
-        # اضافه کردن 'manual' به ابتدای لیست گزینه‌ها
-        OPTIONS="manual\n$IDS"
-        
-        # آپدیت کردن فایل deploy.yml با لیست جدید با استفاده از yq
-        yq e -i '.on.workflow_dispatch.inputs.network_profile.options = strenv(OPTIONS)' .github/workflows/deploy.yml
-        
-        # بررسی اینکه آیا تغییری در فایل ایجاد شده است یا نه
         if [[ -n $(git status --porcelain) ]]; then
           echo "Changes detected in deploy.yml, committing..."
           git config --global user.name 'github-actions[bot]'
