@@ -6,5 +6,13 @@
     "rpc_url": "https://ethereum-sepolia-rpc.publicnode.com",
     "chain_id": "11155111",
     "explorer_url": "https://sepolia.etherscan.io"
+  },
+  {
+    "id": "Monad Testnet-10143",
+    "displayName": "Monad Testnet",
+    "network_name": "Monad Testnet",
+    "rpc_url": "https://testnet-rpc.monad.xyz",
+    "chain_id": "10143",
+    "explorer_url": "https://explorer.testnet.monad.xyz"
   }
 ]
