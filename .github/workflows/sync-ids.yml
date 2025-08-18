@@ -10,18 +10,13 @@ on:
 jobs:
   sync:
     runs-on: ubuntu-latest
-    # ====== بخش جدید: دادن دسترسی نوشتن به ورک‌فلو ======
-    permissions:
-      contents: write
 
     steps:
     - name: Checkout repository
       uses: actions/checkout@v4
-      # ====== تغییر: دیگر به توکن شخصی نیازی نیست ======
-      # with:
-      #   token: ${{ secrets.GH_PAT }}
+      with:
+        token: ${{ secrets.GH_PAT }}
 
-    # ... (بقیه مراحل فایل sync-ids.yml بدون هیچ تغییری باقی می‌مانند) ...
     - name: Install jq and yq
       run: |
         sudo apt-get update
@@ -30,16 +25,23 @@ jobs:
 
     - name: Update deploy.yml with new network IDs
       run: |
+        # استخراج لیست ID ها از فایل JSON
         IDS=$(jq -r '.[].id' networks.json)
+        
+        # اضافه کردن 'manual' به ابتدای لیست گزینه‌ها
         OPTIONS="manual\n$IDS"
+        
+        # آپدیت کردن فایل deploy.yml با لیست جدید با استفاده از yq
         yq e -i '.on.workflow_dispatch.inputs.network_profile.options = strenv(OPTIONS)' .github/workflows/deploy.yml
         
+        # بررسی اینکه آیا تغییری در فایل ایجاد شده است یا نه
         if [[ -n $(git status --porcelain) ]]; then
+          echo "Changes detected in deploy.yml, committing..."
           git config --global user.name 'github-actions[bot]'
           git config --global user.email 'github-actions[bot]@users.noreply.github.com'
           git add .github/workflows/deploy.yml
           git commit -m "chore: sync network profiles to deploy workflow"
           git push
         else
-          echo "No changes needed in deploy.yml"
+          echo "No changes needed in deploy.yml, sync is complete."
         fi
