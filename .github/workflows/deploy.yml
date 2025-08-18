@@ -9,7 +9,6 @@ on:
         type: choice
         options:
           - manual
-          - sepolia-11155111
         default: 'manual'
 
       network_name:
