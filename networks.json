@@ -22,5 +22,13 @@
     "rpc_url": "https://k8s.testnet.json-rpc.injective.network/",
     "chain_id": "1439",
     "explorer_url": "https://testnet.blockscout.injective.network/blocks"
+  },
+  {
+    "id": "0G-Galileo-Testnet-16601",
+    "displayName": "0G-Galileo-Testnet",
+    "network_name": "0G-Galileo-Testnet",
+    "rpc_url": "https://evmrpc-testnet.0g.ai/",
+    "chain_id": "16601",
+    "explorer_url": "https://chainscan-galileo.0g.ai/"
   }
 ]
