@@ -17,35 +17,55 @@ jobs:
       with:
         token: ${{ secrets.GH_PAT }}
 
-    - name: Install jq and yq
-      run: |
-        sudo apt-get update
-        sudo apt-get install -y jq
-        sudo wget https://github.com/mikefarah/yq/releases/latest/download/yq_linux_amd64 -O /usr/bin/yq && sudo chmod +x /usr/bin/yq
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
 
-    - name: Update deploy.yml with new network IDs
-      run: |
-        echo "--- Debugging Sync Workflow ---"
-        echo "1. Verifying content of networks.json as seen by this workflow:"
-        cat networks.json
-        echo ""
+    - name: Install PyYAML
+      run: pip install pyyaml
 
-        echo "2. Extracting IDs from the JSON file..."
-        IDS=$(jq -r '.[].id' networks.json)
-        echo "Extracted IDs:"
-        echo "$IDS"
-        echo "---------------------------------"
+    - name: Update deploy.yml with new network IDs using Python
+      id: update_script
+      run: |
+        import json
+        import yaml
         
-        # دستور اصلی برای آپدیت کردن فایل
-        yq e -i '.on.workflow_dispatch.inputs.network_profile.options = ["manual"] + (load("networks.json") | .[].id)' .github/workflows/deploy.yml
+        # خواندن لیست شبکه‌ها از JSON
+        with open('networks.json', 'r') as f:
+            networks = json.load(f)
         
-        if [[ -n $(git status --porcelain) ]]; then
-          echo "Changes detected in deploy.yml, committing..."
-          git config --global user.name 'github-actions[bot]'
-          git config --global user.email 'github-actions[bot]@users.noreply.github.com'
-          git add .github/workflows/deploy.yml
-          git commit -m "chore: sync network profiles to deploy workflow"
-          git push
-        else
-          echo "No changes needed in deploy.yml, sync is complete."
-        fi
+        # استخراج ID ها و اضافه کردن 'manual'
+        ids = ['manual'] + [net['id'] for net in networks]
+        
+        # خواندن فایل ورک‌فلو
+        deploy_workflow_path = '.github/workflows/deploy.yml'
+        with open(deploy_workflow_path, 'r') as f:
+            deploy_workflow = yaml.safe_load(f)
+            
+        # بررسی اینکه آیا تغییری لازم است یا نه
+        if deploy_workflow['on']['workflow_dispatch']['inputs']['network_profile']['options'] == ids:
+            print("No changes needed in deploy.yml, sync is complete.")
+            # تنظیم یک خروجی برای استفاده در گام بعدی
+            echo "changes_detected=false" >> $GITHUB_OUTPUT
+        else:
+            print("Changes detected. Updating deploy.yml options...")
+            # آپدیت کردن لیست گزینه‌ها
+            deploy_workflow['on']['workflow_dispatch']['inputs']['network_profile']['options'] = ids
+            
+            # نوشتن تغییرات در فایل
+            with open(deploy_workflow_path, 'w') as f:
+                # استفاده از Dumper سفارشی برای حفظ فرمت
+                yaml.dump(deploy_workflow, f, sort_keys=False, Dumper=yaml.Dumper, indent=2, default_flow_style=False)
+            print("deploy.yml has been updated.")
+            echo "changes_detected=true" >> $GITHUB_OUTPUT
+      shell: python
+
+    - name: Commit and Push changes
+      if: steps.update_script.outputs.changes_detected == 'true'
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add .github/workflows/deploy.yml
+        git commit -m "chore: sync network profiles to deploy workflow"
+        git push
