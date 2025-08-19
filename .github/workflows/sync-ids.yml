@@ -25,25 +25,48 @@ jobs:
     - name: Install PyYAML
       run: pip install pyyaml
 
-    - name: DEBUG - Print the structure of deploy.yml
+    - name: Update deploy.yml with new network IDs using Python
+      id: update_script
       run: |
+        import json
         import yaml
+        import os
+        
+        with open('networks.json', 'r') as f:
+            networks = json.load(f)
+        
+        ids = ['manual'] + [net['id'] for net in networks]
         
         deploy_workflow_path = '.github/workflows/deploy.yml'
-        print(f"--- Attempting to load YAML from: {deploy_workflow_path} ---")
-        
         with open(deploy_workflow_path, 'r') as f:
-            try:
-                deploy_workflow_data = yaml.safe_load(f)
-                print("--- YAML loaded successfully. Structure is: ---")
-                print(deploy_workflow_data)
-                print("---------------------------------------------")
-            except Exception as e:
-                print(f"--- FAILED to load YAML file. Error: {e} ---")
-                # همچنین محتوای فایل را به صورت خام نمایش می‌دهیم
-                print("--- Raw file content: ---")
-                f.seek(0) # بازگشت به ابتدای فایل
-                print(f.read())
-                print("-------------------------")
-                raise e
+            deploy_workflow = yaml.safe_load(f)
+            
+        github_output_file = os.getenv('GITHUB_OUTPUT')
+            
+        # ====== بخش اصلاح شده نهایی ======
+        # به جای ['on'] از [True] برای دسترسی به کلید استفاده می‌کنیم
+        
+        if deploy_workflow[True]['workflow_dispatch']['inputs']['network_profile']['options'] == ids:
+            print("No changes needed in deploy.yml, sync is complete.")
+            with open(github_output_file, 'a') as f:
+                f.write("changes_detected=false\n")
+        else:
+            print("Changes detected. Updating deploy.yml options...")
+            deploy_workflow[True]['workflow_dispatch']['inputs']['network_profile']['options'] = ids
+            
+            with open(deploy_workflow_path, 'w') as f:
+                yaml.dump(deploy_workflow, f, sort_keys=False, Dumper=yaml.Dumper, indent=2, default_flow_style=False)
+            print("deploy.yml has been updated.")
+            with open(github_output_file, 'a') as f:
+                f.write("changes_detected=true\n")
+        # ==================================
       shell: python
+
+    - name: Commit and Push changes
+      if: steps.update_script.outputs.changes_detected == 'true'
+      run: |
+        git config --global user.name 'github-actions[bot]'
+        git config --global user.email 'github-actions[bot]@users.noreply.github.com'
+        git add .github/workflows/deploy.yml
+        git commit -m "chore: sync network profiles to deploy workflow"
+        git push
