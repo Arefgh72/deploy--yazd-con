@@ -30,6 +30,7 @@ jobs:
       run: |
         import json
         import yaml
+        import os
         
         # خواندن لیست شبکه‌ها از JSON
         with open('networks.json', 'r') as f:
@@ -43,11 +44,16 @@ jobs:
         with open(deploy_workflow_path, 'r') as f:
             deploy_workflow = yaml.safe_load(f)
             
+        # ====== بخش اصلاح شده برای رفع SyntaxError ======
+        # گرفتن آدرس فایل خروجی از متغیرهای محیطی
+        github_output_file = os.getenv('GITHUB_OUTPUT')
+            
         # بررسی اینکه آیا تغییری لازم است یا نه
         if deploy_workflow['on']['workflow_dispatch']['inputs']['network_profile']['options'] == ids:
             print("No changes needed in deploy.yml, sync is complete.")
-            # تنظیم یک خروجی برای استفاده در گام بعدی
-            echo "changes_detected=false" >> $GITHUB_OUTPUT
+            # تنظیم خروجی با استفاده از پایتون
+            with open(github_output_file, 'a') as f:
+                f.write("changes_detected=false\n")
         else:
             print("Changes detected. Updating deploy.yml options...")
             # آپدیت کردن لیست گزینه‌ها
@@ -55,10 +61,12 @@ jobs:
             
             # نوشتن تغییرات در فایل
             with open(deploy_workflow_path, 'w') as f:
-                # استفاده از Dumper سفارشی برای حفظ فرمت
                 yaml.dump(deploy_workflow, f, sort_keys=False, Dumper=yaml.Dumper, indent=2, default_flow_style=False)
             print("deploy.yml has been updated.")
-            echo "changes_detected=true" >> $GITHUB_OUTPUT
+            # تنظیم خروجی با استفاده از پایتون
+            with open(github_output_file, 'a') as f:
+                f.write("changes_detected=true\n")
+        # ===============================================
       shell: python
 
     - name: Commit and Push changes
