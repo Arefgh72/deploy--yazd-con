@@ -25,8 +25,18 @@ jobs:
 
     - name: Update deploy.yml with new network IDs
       run: |
-        # ====== بخش اصلاح شده و نهایی ======
-        # این دستور به صورت هوشمند لیست گزینه‌ها را بازسازی می‌کند
+        echo "--- Debugging Sync Workflow ---"
+        echo "1. Verifying content of networks.json as seen by this workflow:"
+        cat networks.json
+        echo ""
+
+        echo "2. Extracting IDs from the JSON file..."
+        IDS=$(jq -r '.[].id' networks.json)
+        echo "Extracted IDs:"
+        echo "$IDS"
+        echo "---------------------------------"
+        
+        # دستور اصلی برای آپدیت کردن فایل
         yq e -i '.on.workflow_dispatch.inputs.network_profile.options = ["manual"] + (load("networks.json") | .[].id)' .github/workflows/deploy.yml
         
         if [[ -n $(git status --porcelain) ]]; then
