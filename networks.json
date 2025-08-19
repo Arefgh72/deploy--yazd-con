@@ -14,5 +14,13 @@
     "rpc_url": "https://testnet-rpc.monad.xyz",
     "chain_id": "10143",
     "explorer_url": "https://explorer.testnet.monad.xyz"
+  },
+  {
+    "id": "Injective Testnet-1439",
+    "displayName": "Injective Testnet",
+    "network_name": "Injective Testnet",
+    "rpc_url": "https://k8s.testnet.json-rpc.injective.network/",
+    "chain_id": "1439",
+    "explorer_url": "https://testnet.blockscout.injective.network/blocks"
   }
 ]
